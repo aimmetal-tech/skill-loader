@@ -1,0 +1,27 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Local credentials
+.env
+
+# Test and tool caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Agent harness plans
+.codebuddy/plans
+
+# Skills
+# 只保留 skills/ 目录本身（用 .gitkeep 占位），忽略各 skill 子目录
+skills/*
+!skills/.gitkeep

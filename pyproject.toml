@@ -1,0 +1,48 @@
+[project]
+name = "dynamic-skill-loader"
+version = "0.1.0"
+description = "Dynamic skill loader with Jev ranking"
+readme = "README.md"
+authors = [
+    { name = "aimmetal-tech" }
+]
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "mcp[cli]>=2.2.0",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "python-frontmatter>=1.3.0",
+    "typesafe-sdk>=0.7.0",
+]
+
+[project.scripts]
+dynamic-skill-loader = "dynamic_skill_loader:main"
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.11",
+]
+
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dynamic_skill_loader"]
