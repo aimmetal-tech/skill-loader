@@ -15,7 +15,11 @@ def rank_by_state(
     state: str,
     harness: AgentHarness = AgentHarness.UNKNOWN,
     skills_dir: Path | None = None,
+    top_k: int = 5,
 ):
+    if top_k < 1:
+        raise ValueError("top_k must be at least 1")
+
     client = TypeSafeClient()
 
     skills_path = find_skill_meta_files(
@@ -51,9 +55,10 @@ def rank_by_state(
         model = dict_model[name]
         model.score = score
 
-    return dict(
-        sorted(dict_model.items(), key=lambda item: item[1].score, reverse=True)
+    ranked_models = sorted(
+        dict_model.items(), key=lambda item: item[1].score, reverse=True
     )
+    return dict(ranked_models[:top_k])
 
 
 if __name__ == "__main__":

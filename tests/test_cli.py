@@ -25,7 +25,7 @@ def test_build_state_preserves_multiline_request():
     assert request in build_state(["multi"], request)
 
 
-def test_retrieve_skills_builds_state_and_returns_descending_scores(monkeypatch):
+def test_retrieve_skills_builds_state_and_returns_top_k_scores(monkeypatch):
     answer = {
         "high": SkillScoreModel(
             name="high", score=0.9, abs_path=Path("skills/high/SKILL.md")
@@ -41,21 +41,20 @@ def test_retrieve_skills_builds_state_and_returns_descending_scores(monkeypatch)
 
     monkeypatch.setattr(cli, "detect_harness", lambda ctx: AgentHarness.UNKNOWN)
 
-    def fake_rank_by_state(state, harness, *, skills_dir):
-        calls.append((state, harness, skills_dir))
+    def fake_rank_by_state(state, harness, *, skills_dir, top_k):
+        calls.append((state, harness, skills_dir, top_k))
         return answer
 
     monkeypatch.setattr(cli, "rank_by_state", fake_rank_by_state)
 
-    result = cli.retrieve_skills(
-        object(), ["python", "files"], "How do I read a file?"
-    )
+    result = cli.retrieve_skills(object(), ["python", "files"], "How do I read a file?")
 
     assert calls == [
         (
             cli.build_state(["python", "files"], "How do I read a file?"),
             AgentHarness.UNKNOWN,
             None,
+            5,
         )
     ]
     assert list(result) == ["high", "middle", "low"]
@@ -74,11 +73,30 @@ def test_retrieve_skills_passes_none_request(monkeypatch):
     monkeypatch.setattr(
         cli,
         "rank_by_state",
-        lambda state, harness, *, skills_dir: captured.append(
-            (state, harness, skills_dir)
-        )
-        or answer,
+        lambda state, harness, *, skills_dir, top_k: (
+            captured.append((state, harness, skills_dir, top_k)) or answer
+        ),
     )
 
     assert cli.retrieve_skills(object(), ["search"]) == {}
-    assert captured == [(cli.build_state(["search"], None), AgentHarness.UNKNOWN, None)]
+    assert captured == [
+        (cli.build_state(["search"], None), AgentHarness.UNKNOWN, None, 5)
+    ]
+
+
+def test_retrieve_skills_passes_custom_top_k(monkeypatch):
+    answer = {}
+    captured = []
+    monkeypatch.setattr(cli, "detect_harness", lambda ctx: AgentHarness.UNKNOWN)
+    monkeypatch.setattr(
+        cli,
+        "rank_by_state",
+        lambda state, harness, *, skills_dir, top_k: (
+            captured.append((state, harness, skills_dir, top_k)) or answer
+        ),
+    )
+
+    assert cli.retrieve_skills(object(), ["search"], top_k=2) == {}
+    assert captured == [
+        (cli.build_state(["search"], None), AgentHarness.UNKNOWN, None, 2)
+    ]

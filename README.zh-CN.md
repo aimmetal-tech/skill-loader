@@ -23,7 +23,7 @@ Dynamic Skill Loader 是一个提供 `retrieve_skills` 工具的 MCP 服务。�
 2. 选择技能根目录，并让 `--skills-dir` 优先于 Harness 默认目录。
 3. 读取每个技能的 YAML front matter。
 4. 使用 TypeSafe 评估技能相关性。
-5. 按得分从高到低返回 `SkillScoreModel` 结果。
+5. 按得分从高到低返回最多 `top_k` 个 `SkillScoreModel` 结果，`top_k` 默认为 5。
 
 每个结果包含技能名称、相关性得分，以及该技能 `SKILL.md` 文件的绝对路径。MCP 客户端可以使用这个路径读取完整的技能说明。
 
@@ -79,7 +79,11 @@ uv run dynamic-skill-loader --TYPESAFE_API_KEY your-typesafe-api-key --skills-di
 服务提供以下工具：
 
 ```text
-retrieve_skills(keyword: list[str], original_request: str | null = null)
+retrieve_skills(
+    keyword: list[str],
+    original_request: str | null = null,
+    top_k: int = 5,
+)
 ```
 
 输入示例：
@@ -87,9 +91,12 @@ retrieve_skills(keyword: list[str], original_request: str | null = null)
 ```json
 {
   "keyword": ["web search", "recent news"],
-  "original_request": "Find a skill for searching today's news."
+  "original_request": "Find a skill for searching today's news.",
+  "top_k": 3
 }
 ```
+
+`top_k` 必须至少为 1。返回结果会按照相关性得分从高到低排序。
 
 ## 添加技能
 
@@ -110,7 +117,7 @@ description: A concise description of when this skill should be used.
 Operational instructions for the skill go here.
 ```
 
-当前加载器不会搜索嵌套的技能目录。详细参考资料应放在技能目录附近，并从 `SKILL.md` 建立链接。本地开发时可以显式使用 `--skills-dir ./skills`。
+当前加载器不会搜索嵌套的技能目录。详细参考资料应放在技能目录附近，并从 `SKILL.md` 建立链接。本仓库包含一个本地技能 `.agents/skills/dynamic-skill-loader/SKILL.md`；本地测试时可以使用 `--skills-dir ./.agents/skills`，也可以指定其他兼容的外部技能根目录。
 
 ## 项目结构
 
@@ -123,7 +130,9 @@ dynamic-skill-loader/
 │   ├── util_detect_harness.py  # MCP 客户端 Harness 检测
 │   └── util_read_skill.py      # 技能目录、发现和元数据解析
 ├── tests/                      # 单元测试
-├── skills/                     # 可选的本地开发技能目录
+├── .agents/skills/
+│   └── dynamic-skill-loader/SKILL.md # 仓库内的 loader 使用说明
+├── .github/workflows/publish.yml # 由 tag 触发的 PyPI 发布流程
 ├── pyproject.toml              # 包元数据和 dynamic-skill-loader 入口点
 ├── uv.lock                     # 锁定的依赖
 ├── LICENSE                     # MIT 许可证
@@ -144,6 +153,24 @@ uv run ruff format --check .
 ```
 
 测试会替换 TypeSafe 客户端和技能发现逻辑，因此不需要凭据或网络连接。架构说明和项目约定请参阅 [AGENTS.md](AGENTS.md)。
+
+## 发布到 PyPI
+
+`.github/workflows/publish.yml` 会在推送匹配 `v*.*.*` 的 tag 时运行。它会安装锁定的环境、运行测试和 Ruff lint、校验 tag 版本与 `pyproject.toml` 一致、执行 `uv build`，然后将构建产物发布到 PyPI。
+
+创建发布 tag 前，先更新包版本和锁文件：
+
+```powershell
+# 修改 pyproject.toml 中的 version，例如：0.1.1
+uv lock
+git add pyproject.toml uv.lock
+git commit -m "Release v0.1.1"
+git push origin main
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+在 GitHub 仓库的 `Settings` → `Secrets and variables` → `Actions` 中创建名为 `PYPI_API_TOKEN` 的 repository secret，值填写完整的 PyPI API token。项目已存在于 PyPI 时优先使用项目级 token，并且不要把 token 提交到仓库。
 
 ## 许可证
 

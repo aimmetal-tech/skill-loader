@@ -122,7 +122,7 @@ wheels = [
 
 [[package]]
 name = "dynamic-skill-loader"
-version = "0.1.0"
+version = "0.1.101"
 source = { editable = "." }
 dependencies = [
     { name = "mcp", extra = ["cli"] },

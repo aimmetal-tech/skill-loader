@@ -23,7 +23,7 @@ Dynamic Skill Loader is an MCP server that exposes a `retrieve_skills` tool. Giv
 2. Selects a skill root, honoring `--skills-dir` before Harness defaults.
 3. Reads each skill's YAML front matter.
 4. Uses TypeSafe to estimate relevance.
-5. Returns `SkillScoreModel` values sorted by descending score.
+5. Returns up to `top_k` `SkillScoreModel` values sorted by descending score; `top_k` defaults to 5.
 
 Each result includes the skill name, relevance score, and an absolute path to its `SKILL.md` file. A client can use that path to read the full skill instructions.
 
@@ -79,7 +79,11 @@ uv run dynamic-skill-loader --TYPESAFE_API_KEY your-typesafe-api-key --skills-di
 The server exposes:
 
 ```text
-retrieve_skills(keyword: list[str], original_request: str | null = null)
+retrieve_skills(
+    keyword: list[str],
+    original_request: str | null = null,
+    top_k: int = 5,
+)
 ```
 
 Example input:
@@ -87,9 +91,12 @@ Example input:
 ```json
 {
   "keyword": ["web search", "recent news"],
-  "original_request": "Find a skill for searching today's news."
+  "original_request": "Find a skill for searching today's news.",
+  "top_k": 3
 }
 ```
+
+`top_k` must be at least 1. Results are returned in descending relevance-score order.
 
 ## Add a skill
 
@@ -110,7 +117,7 @@ description: A concise description of when this skill should be used.
 Operational instructions for the skill go here.
 ```
 
-The loader does not search nested skill directories. Keep detailed references beside the skill and link to them from `SKILL.md`. For local development, `--skills-dir ./skills` can be used explicitly.
+The loader does not search nested skill directories. Keep detailed references beside the skill and link to them from `SKILL.md`. This repository includes a local skill at `.agents/skills/dynamic-skill-loader/SKILL.md`; use `--skills-dir ./.agents/skills` or another compatible external skill root when testing it locally.
 
 ## Project structure
 
@@ -123,7 +130,9 @@ dynamic-skill-loader/
 │   ├── util_detect_harness.py  # MCP client Harness detection
 │   └── util_read_skill.py      # Skill roots, discovery, and metadata parsing
 ├── tests/                      # Focused unit tests
-├── skills/                     # Optional local development skill root
+├── .agents/skills/
+│   └── dynamic-skill-loader/SKILL.md # Repository-local loader instructions
+├── .github/workflows/publish.yml # Tag-triggered PyPI publishing workflow
 ├── pyproject.toml              # Package metadata and dynamic-skill-loader entry point
 ├── uv.lock                     # Locked dependencies
 ├── LICENSE                     # MIT license
@@ -144,6 +153,24 @@ uv run ruff format --check .
 ```
 
 Tests stub TypeSafe and skill discovery, so they do not require credentials or network access. See [AGENTS.md](AGENTS.md) for architecture notes and project-specific conventions.
+
+## Release to PyPI
+
+The GitHub Actions workflow in `.github/workflows/publish.yml` runs when a tag matching `v*.*.*` is pushed. It installs the locked environment, runs tests and Ruff lint, verifies that the tag version matches `pyproject.toml`, runs `uv build`, and publishes the distributions to PyPI.
+
+Before creating a release tag, update the package version and lock file:
+
+```powershell
+# Edit version in pyproject.toml, for example: 0.1.1
+uv lock
+git add pyproject.toml uv.lock
+git commit -m "Release v0.1.1"
+git push origin main
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+Configure a repository secret named `PYPI_API_TOKEN` under GitHub `Settings` → `Secrets and variables` → `Actions`. Its value should be the complete PyPI API token. Prefer a project-scoped token when the project already exists on PyPI, and never commit the token to the repository.
 
 ## License
 

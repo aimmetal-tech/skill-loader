@@ -50,12 +50,19 @@ def retrieve_skills(
     original_request: Annotated[
         str | None, Field(description="The original request or question from user.")
     ] = None,
+    top_k: Annotated[
+        int,
+        Field(
+            description="The maximum number of relevant skills to return.",
+            ge=1,
+        ),
+    ] = 5,
 ) -> dict[str, SkillScoreModel]:
     """Retrieve skills by keyword and original request"""
     harness = detect_harness(ctx)
     logger.info("Detected agent harness: %s", harness)
     state = build_state(keyword, original_request)
-    answer = rank_by_state(state, harness, skills_dir=SKILLS_DIR)
+    answer = rank_by_state(state, harness, skills_dir=SKILLS_DIR, top_k=top_k)
     return answer
 
 
